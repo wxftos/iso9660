@@ -9,6 +9,7 @@
 #define DIR_RECORD_ID_MAX_SIZE 255
 #define SYSTEM_AREA_SIZE 32768
 #define VOLUME_DESCRIPTOR_SIZE 2048
+#define SECTOR_SIZE 2048
 
 typedef char char_a;
 typedef char char_d;
@@ -29,7 +30,7 @@ typedef uint32_t uint32_LSB;
 typedef uint32_t uint32_MSB;
 typedef uint32_t uint32_LSB_MSB[2];
 
-struct datetime_dec {
+struct __attribute__((__packed__)) datetime_dec {
   char_d year[4];
   char_d month[2];
   char_d day[2];
@@ -40,7 +41,7 @@ struct datetime_dec {
   uint8_t time_zone;
 };
 
-struct datetime_num {
+struct __attribute__((__packed__)) datetime_num {
   uint8_t year;
   uint8_t month;
   uint8_t day;
@@ -50,16 +51,16 @@ struct datetime_num {
   int8_t offset;
 };
 
-enum dir_file_flags {
-  DIR_RECORD_HIDDEN = (1u << 0),
-  DIR_RECORD_DIR = (1u << 1),
-  DIR_RECORD_ASSOCIATED = (1u << 2),
-  DIR_RECORD_ATTRIBUTE_FORMAT = (1u << 3),
-  DIR_RECORD_ATTRIBUTE_OWNER = (1u << 4),
-  DIR_RECORD_NOT_FINAL = (1u << 7),
+enum record_flags {
+  RECORD_HIDDEN = 0u,
+  RECORD_DIR = (1u << 0),
+  RECORD_ASSOCIATED = (1u << 1),
+  RECORD_ATTRIBUTE_FORMAT = (1u << 2),
+  RECORD_ATTRIBUTE_OWNER = (1u << 3),
+  RECORD_NOT_FINAL = (1u << 6),
 };
 
-struct dir_record {
+struct __attribute__((__packed__)) record {
   uint8_t length;
   uint8_t extended_attribute_length;
   uint32_LSB_MSB extent_location;
@@ -71,11 +72,36 @@ struct dir_record {
   uint16_LSB_MSB volume_sequence_num;
   uint8_t id_length;
   char_d id[DIR_RECORD_ID_MAX_SIZE];
-  int8_t padding;
-  int8_t data[DIR_RECORD_ID_MAX_SIZE];
 };
 
-struct volume_descriptor {
+struct __attribute__((__packed__)) record_head {
+  uint8_t length;
+  uint8_t extended_attribute_length;
+  uint32_LSB_MSB extent_location;
+  uint32_LSB_MSB extent_size;
+  struct datetime_num datetime;
+  uint8_t file_flags;
+  uint8_t file_unit_size;
+  uint8_t file_interleave_gap_size;
+  uint16_LSB_MSB volume_sequence_num;
+  uint8_t id_length;
+};
+
+struct __attribute__((__packed__)) record_root {
+  uint8_t length;
+  uint8_t extended_attribute_length;
+  uint32_LSB_MSB extent_location;
+  uint32_LSB_MSB extent_size;
+  struct datetime_num datetime;
+  uint8_t file_flags;
+  uint8_t file_unit_size;
+  uint8_t file_interleave_gap_size;
+  uint16_LSB_MSB volume_sequence_num;
+  uint8_t id_length;
+  char_d id;
+};
+
+struct __attribute__((__packed__)) volume_descriptor {
   uint8_t type;
   char_a id[5];
   uint8_t version;
@@ -104,11 +130,11 @@ struct __attribute__((__packed__)) volume_descriptor_primary {
   uint16_LSB_MSB volume_sequence_num;
   uint16_LSB_MSB logical_block_size;
   uint32_LSB_MSB path_table_size;
-  uint32_LSB path_table_type_l_location;
-  uint32_LSB path_table_type_l_opt_location;
-  uint32_MSB path_table_type_m_location;
-  uint32_MSB path_table_type_m_opt_location;
-  struct dir_record root_entry;
+  uint32_LSB path_table_location_l;
+  uint32_LSB path_table_location_opt_l;
+  uint32_MSB path_table_location_m;
+  uint32_MSB path_table_location_opt_m;
+  struct record_root root_entry;
   char_d volume_set_id[128];
   char_a publisher_id[128];
   char_a preparer_id[128];
@@ -135,19 +161,25 @@ struct __attribute__((__packed__)) volume_descriptor_boot_record {
   int8_t data[1977];
 };
 
-struct volume_descriptor_set_terminator {
+struct __attribute__((__packed__)) volume_descriptor_set_terminator {
   uint8_t type;
   char_a id[5];
   uint8_t version;
 };
 
-struct path_table {
+struct __attribute__((__packed__)) path_table_head {
+  uint8_t length;
+  uint8_t extended_attribute_length;
+  uint32_t extent_location;
+  uint16_t num;
+};
+
+struct __attribute__((__packed__)) path_table {
   uint8_t length;
   uint8_t extended_attribute_length;
   uint32_t extent_location;
   uint16_t num;
   char_d id[DIR_RECORD_ID_MAX_SIZE];
-  int8_t padding;
 };
 
 struct volume_descriptor_list {
@@ -156,23 +188,23 @@ struct volume_descriptor_list {
 };
 
 struct record_list {
-  struct dir_record data;
+  struct record data;
   struct record_list *next;
 };
 
-struct path_list {
+struct path_table_list {
   struct path_table data;
-  struct path_list *next;
+  struct path_table_list *next;
 };
 
 struct iso9660 {
   int8_t system_area[SYSTEM_AREA_SIZE];
   struct volume_descriptor_list *volumes;
-  struct path_list *paths;
-  struct record_list *dirs;
+  struct path_table_list *dirs;
+  struct record_list *records;
 };
 
-ssize_t iso9660_open(struct iso9660 *fs, FILE *file);
+ssize_t iso9660_open(struct iso9660 *fs, const char* path);
 ssize_t iso9660_deinit(struct iso9660 *fs);
 ssize_t iso9660_read(struct iso9660 *fs, const void *buf, size_t size);
 ssize_t iso9660_write(struct iso9660 *fs, const char *path, const void *buf,
