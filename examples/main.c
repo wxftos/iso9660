@@ -63,6 +63,21 @@ void __print(const struct iso9660 *fs) {
            p->data.extent_location[0], p->data.extent_location[0],
            p->data.file_flags);
     printf("id='%d %d %d'\n", p->data.id[0], p->data.id[1], p->data.id[2]);
+
+    if ((p->data.file_flags & RECORD_DIR) == 0) {
+       printf("-------------\n");
+
+       for (struct file_list *file = fs->files; file != NULL; file = file->next) {
+           if (file->pos[0] == p->data.extent_location[0] && file->pos[1] == p->data.extent_location[1]) {
+              printf("content=%.*s\n", (int)file->size, file->data);
+              for (int i = 0; i < (int)file->size; i++) {
+                  printf("%c", *(file->data + i));
+              }
+
+              printf("\n");
+           }
+       }
+    }
   }
 }
 

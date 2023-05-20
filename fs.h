@@ -52,12 +52,12 @@ struct __attribute__((__packed__)) datetime_num {
 };
 
 enum record_flags {
-  RECORD_HIDDEN = 0u,
-  RECORD_DIR = (1u << 0),
-  RECORD_ASSOCIATED = (1u << 1),
-  RECORD_ATTRIBUTE_FORMAT = (1u << 2),
-  RECORD_ATTRIBUTE_OWNER = (1u << 3),
-  RECORD_NOT_FINAL = (1u << 6),
+  RECORD_HIDDEN = (1u << 0),
+  RECORD_DIR = (1u << 1),
+  RECORD_ASSOCIATED = (1u << 2),
+  RECORD_ATTRIBUTE_FORMAT = (1u << 3),
+  RECORD_ATTRIBUTE_OWNER = (1u << 4),
+  RECORD_NOT_FINAL = (1u << 7),
 };
 
 struct __attribute__((__packed__)) record {
@@ -197,11 +197,19 @@ struct path_table_list {
   struct path_table_list *next;
 };
 
+struct file_list {
+  char* data;
+  size_t size;
+  uint32_LSB_MSB pos;
+  struct file_list *next;
+};
+
 struct iso9660 {
   int8_t system_area[SYSTEM_AREA_SIZE];
   struct volume_descriptor_list *volumes;
   struct path_table_list *dirs;
   struct record_list *records;
+  struct file_list *files;
 };
 
 ssize_t iso9660_open(struct iso9660 *fs, const char* path);

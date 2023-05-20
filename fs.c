@@ -161,10 +161,44 @@ static int parse_records(const void *buf, size_t size, size_t start,
   }
 
   // todo: recursion
-  //
   // for (list = *records; list != NULL; list = list->next) {
-
+  //
   // }
+
+  return (0);
+}
+
+static int collect_files(const void *buf, size_t size,
+                         const struct record_list *records,
+                         struct file_list **files) {
+  struct file_list *list;
+  char *data;
+  size_t file_size, file_lbs;
+
+  for (struct record_list *record = (struct record_list *)records;
+       record != NULL; record = record->next) {
+    if ((record->data.file_flags & RECORD_DIR) == RECORD_DIR) {
+      continue;
+    }
+
+    if (*files == NULL) {
+      *files = malloc(sizeof(struct file_list));
+      list = *files;
+    } else {
+      list->next = malloc(sizeof(struct file_list));
+      list = list->next;
+    }
+
+    file_size = record->data.extent_size[0];
+    file_lbs = record->data.extent_location[0] * SECTOR_SIZE;
+    data = malloc(file_size);
+    memcpy((void *)data, (void *)(buf + file_lbs), file_size);
+
+    list->pos[0] = record->data.extent_location[0];
+    list->pos[1] = record->data.extent_location[1];
+    list->data = data;
+    list->size = file_size;
+  }
 
   return (0);
 }
@@ -172,7 +206,8 @@ static int parse_records(const void *buf, size_t size, size_t start,
 static int parse_volume(const void *buf, size_t size,
                         const struct volume_descriptor *volume,
                         struct path_table_list **dirs,
-                        struct record_list **records) {
+                        struct record_list **records,
+                        struct file_list **files) {
   struct volume_descriptor_primary *pvd;
   size_t volume_size;
   int err;
@@ -196,6 +231,11 @@ static int parse_volume(const void *buf, size_t size,
       return (-1);
     }
 
+    err = collect_files(buf, size, *records, files);
+    if (err != 0) {
+      return (-1);
+    }
+
     break;
   }
   default:
@@ -214,6 +254,7 @@ ssize_t iso9660_open(struct iso9660 *fs, const char *path) {
   struct volume_descriptor_list *volume = NULL;
   struct path_table_list *dirs = NULL;
   struct record_list *records = NULL;
+  struct file_list *files = NULL;
 
   size = read_file(path, &buf);
   if (size < 0) {
@@ -226,7 +267,7 @@ ssize_t iso9660_open(struct iso9660 *fs, const char *path) {
   }
 
   for (volume = volumes; volume != NULL; volume = volume->next) {
-    err = parse_volume(buf, size, &volume->data, &dirs, &records);
+    err = parse_volume(buf, size, &volume->data, &dirs, &records, &files);
     if (err != 0) {
       return (-1);
     }
@@ -235,6 +276,7 @@ ssize_t iso9660_open(struct iso9660 *fs, const char *path) {
   fs->volumes = volumes;
   fs->dirs = dirs;
   fs->records = records;
+  fs->files = files;
 
   return (0);
 }
