@@ -113,7 +113,7 @@ enum volume_descriptor_type {
   VOLUME_DESCRIPTOR_PRIMARY_RECORD = 1,
   VOLUME_DESCRIPTOR_SUPPLEMENTARY_RECORD = 2,
   VOLUME_DESCRIPTOR_PARTITION_RECORD = 3,
-  VOLUME_DESCRIPTOR_SET_TERMINATOR = 255,
+  VOLUME_DESCRIPTOR_TERMINATOR = 255,
 };
 
 struct __attribute__((__packed__)) volume_descriptor_primary {
@@ -152,7 +152,7 @@ struct __attribute__((__packed__)) volume_descriptor_primary {
   int8_t unused5[653];
 };
 
-struct __attribute__((__packed__)) volume_descriptor_boot_record {
+struct __attribute__((__packed__)) volume_descriptor_boot {
   uint8_t type;
   char_a id[5];
   uint8_t version;
@@ -161,7 +161,7 @@ struct __attribute__((__packed__)) volume_descriptor_boot_record {
   int8_t data[1977];
 };
 
-struct __attribute__((__packed__)) volume_descriptor_set_terminator {
+struct __attribute__((__packed__)) volume_descriptor_terminator {
   uint8_t type;
   char_a id[5];
   uint8_t version;
@@ -210,6 +210,7 @@ struct iso9660 {
   struct path_table_list *dirs;
   struct record_list *records;
   struct file_list *files;
+  struct file_list *sectors;
 };
 
 ssize_t iso9660_open(struct iso9660 *fs, const char* path);

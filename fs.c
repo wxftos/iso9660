@@ -78,7 +78,7 @@ static int parse_descriptors(const void *buf, size_t size,
     memcpy((void *)&volumes_ptr->data, descriptor,
            sizeof(struct volume_descriptor));
 
-    if (descriptor->type == VOLUME_DESCRIPTOR_SET_TERMINATOR) {
+    if (descriptor->type == VOLUME_DESCRIPTOR_TERMINATOR) {
       break;
     }
   }
@@ -97,8 +97,8 @@ static int parse_path_table(const void *buf, size_t size, size_t start,
 
   while (1) {
     if (*dirs == NULL) {
-      ptr = malloc(sizeof(struct path_table_list));
-      *dirs = ptr;
+      *dirs = malloc(sizeof(struct path_table_list));
+      ptr = *dirs;
     } else {
       ptr->next = malloc(sizeof(struct path_table_list));
       ptr = ptr->next;
@@ -255,6 +255,8 @@ ssize_t iso9660_open(struct iso9660 *fs, const char *path) {
   struct path_table_list *dirs = NULL;
   struct record_list *records = NULL;
   struct file_list *files = NULL;
+  struct file_list *sectors = NULL;
+  struct file_list *sectors_ptr = NULL;
 
   size = read_file(path, &buf);
   if (size < 0) {
@@ -273,10 +275,28 @@ ssize_t iso9660_open(struct iso9660 *fs, const char *path) {
     }
   }
 
+  for (int i = 0; i * SECTOR_SIZE < size; i += 1) {
+    if (sectors == NULL) {
+      sectors = malloc(sizeof(struct file_list));
+      sectors_ptr = sectors;
+    } else {
+      sectors_ptr->next = malloc(sizeof(struct file_list));
+      sectors_ptr = sectors_ptr->next;
+    }
+
+    sectors_ptr->data = malloc(SECTOR_SIZE);
+    sectors_ptr->size = SECTOR_SIZE;
+    sectors_ptr->pos[0] = i;
+    sectors_ptr->pos[1] = 0;
+
+    memcpy(sectors_ptr->data, buf + i * SECTOR_SIZE, SECTOR_SIZE);
+  }
+
   fs->volumes = volumes;
   fs->dirs = dirs;
   fs->records = records;
   fs->files = files;
+  fs->sectors = sectors;
 
   return (0);
 }
