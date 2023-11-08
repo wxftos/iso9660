@@ -1,5 +1,5 @@
-#include "../eltorito.h"
-#include "../fs.h"
+#include "eltorito.h"
+#include "fs.h"
 #include <stdio.h>
 #include <string.h>
 
