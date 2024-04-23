@@ -212,7 +212,7 @@ struct iso9660 {
   struct file_list *files;
   struct file_list *sectors;
 };
-
+#define ssize_t size_t
 ssize_t iso9660_open(struct iso9660 *fs, const char* path);
 ssize_t iso9660_deinit(struct iso9660 *fs);
 ssize_t iso9660_read(struct iso9660 *fs, const void *buf, size_t size);

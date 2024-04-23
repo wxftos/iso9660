@@ -220,10 +220,9 @@ void __print(const struct iso9660 *fs) {
 
 int main() {
   struct iso9660 fs;
-  int ok = iso9660_open(
-      &fs, "/home/maxim/projects/kexploration/bkernel/build/startup.iso");
+  int ok = iso9660_open(&fs, "TempleOS.ISO");
   if (ok < 0) {
-    printf("Error build a iso9660\n");
+    printf("Error build a iso9660, err=%d\n", ok);
     return -2;
   }
 

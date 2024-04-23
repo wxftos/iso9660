@@ -14,6 +14,7 @@ static int64_t read_file(const char *path, void **buf) {
 
   f = fopen(path, "rb");
   if (f == NULL) {
+  	printf("open %s failed\n", path);
     return (-1);
   }
 
@@ -265,13 +266,13 @@ ssize_t iso9660_open(struct iso9660 *fs, const char *path) {
 
   err = parse_descriptors(buf, size, &volumes);
   if (err != 0) {
-    return (-1);
+    return (-2);
   }
 
   for (volume = volumes; volume != NULL; volume = volume->next) {
     err = parse_volume(buf, size, &volume->data, &dirs, &records, &files);
     if (err != 0) {
-      return (-1);
+      return (-3);
     }
   }
 
